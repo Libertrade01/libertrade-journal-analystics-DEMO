@@ -1,0 +1,11 @@
+{
+  "name": "libertrade-analytics-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Libertrade Analytics static demo with mock data",
+  "scripts": {
+    "build": "node scripts/build-demo-html.js",
+    "dev": "npx --yes http-server public -p 3456 -c-1",
+    "start": "npx --yes http-server public -p 3456 -c-1"
+  }
+}
