@@ -20,7 +20,7 @@ npm run dev
 
 Open http://localhost:3456
 
-`npm run build` regenerates `public/index.html` from the Trade Desk source.
+`npm run build` regenerates `public/index.html` from the Trade Desk source when that file exists locally. On Vercel (and any clone without Trade Desk), the build skips and uses the committed `public/index.html`.
 
 ## Deploy to Vercel
 

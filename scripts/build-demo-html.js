@@ -5,7 +5,12 @@ const src = path.join(__dirname, '../../Trade Desk/public/analytics.html');
 const dest = path.join(__dirname, '../public/index.html');
 
 if (!fs.existsSync(src)) {
+  if (fs.existsSync(dest)) {
+    console.log('Skip: Trade Desk source not present; using committed public/index.html');
+    process.exit(0);
+  }
   console.error('Source not found:', src);
+  console.error('Committed public/index.html is also missing — cannot build.');
   process.exit(1);
 }
 
