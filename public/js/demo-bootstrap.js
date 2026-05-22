@@ -181,10 +181,83 @@
     return [];
   };
 
+  function weekRangeFromFriday(weekEnding) {
+    const fri = new Date(weekEnding + 'T12:00:00');
+    const mon = new Date(fri);
+    mon.setDate(mon.getDate() - 4);
+    const pad = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return { start: pad(mon), end: weekEnding };
+  }
+
+  function patchReportsSidebar() {
+    const orig = window.initReportsPage;
+    if (typeof orig !== 'function') return;
+    if (typeof MockStore === 'undefined' || !MockStore.store || !MockStore.store.agentWeeks) return;
+
+    window.initReportsPage = async function demoInitReportsPage() {
+      const sidebar = document.getElementById('reports-sidebar-weeks');
+      if (!sidebar) return orig();
+
+      const weeks = MockStore.store.agentWeeks
+        .slice()
+        .reverse()
+        .map(weekRangeFromFriday);
+
+      const earliest = weeks[weeks.length - 1].start;
+      const headers =
+        typeof HEADERS !== 'undefined'
+          ? HEADERS
+          : { apikey: '', Authorization: '' };
+      const base =
+        typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '';
+
+      const [daysRes, tradesRes] = await Promise.all([
+        fetch(`${base}/rest/v1/trading_days?select=date&date=gte.${earliest}&order=date.desc`, {
+          headers,
+        }),
+        fetch(`${base}/rest/v1/trades?select=date,net_pnl&date=gte.${earliest}`, { headers }),
+      ]);
+      const days = await daysRes.json();
+      const trades = await tradesRes.json();
+      const pnlByDate = {};
+      trades.forEach((t) => {
+        pnlByDate[t.date] = (pnlByDate[t.date] || 0) + (t.net_pnl || 0);
+      });
+
+      sidebar.innerHTML = weeks
+        .map((w, i) => {
+          const weekPnl = Object.keys(pnlByDate)
+            .filter((d) => d >= w.start && d <= w.end)
+            .reduce((sum, d) => sum + pnlByDate[d], 0);
+          const hasTrades =
+            weekPnl !== 0 || days.some((d) => d.date >= w.start && d.date <= w.end);
+          const label =
+            typeof fmtWeekLabel === 'function'
+              ? fmtWeekLabel(w.start, w.end)
+              : `${w.start} – ${w.end}`;
+          const pnlStr =
+            weekPnl >= 0 ? `+$${weekPnl.toFixed(0)}` : `-$${Math.abs(weekPnl).toFixed(0)}`;
+          const pnlCol =
+            weekPnl > 0 ? 'var(--green)' : weekPnl < 0 ? 'var(--red)' : 'var(--muted)';
+          return `<div class="sidebar-week-item ${i === 0 ? 'active' : ''}" onclick="loadWeekReport('${w.start}','${w.end}',this)">
+      <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.04em;color:var(--text)">${label}</span>
+      <span style="font-family:var(--font-num);font-size:11px;font-weight:300;color:${pnlCol}">${hasTrades ? pnlStr : '—'}</span>
+    </div>`;
+        })
+        .join('');
+
+      if (typeof loadWeekReport === 'function') {
+        loadWeekReport(weeks[0].start, weeks[0].end, null);
+      }
+    };
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
     if (typeof MockStore !== 'undefined' && MockStore.store && MockStore.store.agentWeeks) {
       window.AGENT_WEEKS = MockStore.store.agentWeeks;
     }
+    patchReportsSidebar();
     patchAuthBlock();
     disableImport();
     const signout = document.getElementById('signout-btn');

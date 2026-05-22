@@ -72,16 +72,100 @@
     return out;
   }
 
-  /** Demo week endings (Fridays) — includes May 18–22 week (ends 2026-05-22). */
+  /** Demo week endings (Fridays) — two showcase weeks only. */
   function demoAgentWeeks() {
-    return [
-      '2026-04-18',
-      '2026-04-25',
-      '2026-05-01',
-      '2026-05-08',
-      '2026-05-15',
-      '2026-05-22',
+    return ['2026-05-15', '2026-05-22'];
+  }
+
+  /** Curated trades for demo report weeks so sidebar P&L matches agent narrative. */
+  function seedCuratedWeekTrades(trades, tradingDays) {
+    const curated = [
+      {
+        days: ['2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14', '2026-05-15'],
+        dailyNet: [88, 142, 96, 186, 16],
+        sleep: [84, 86, 83, 89, 85],
+        recovery: [68, 71, 64, 74, 69],
+      },
+      {
+        days: ['2026-05-18', '2026-05-19', '2026-05-20', '2026-05-21', '2026-05-22'],
+        dailyNet: [64, -48, 118, 142, 136],
+        sleep: [78, 81, 84, 86, 87],
+        recovery: [62, 59, 58, 67, 62],
+      },
     ];
+
+    const allDates = new Set(curated.flatMap((w) => w.days));
+    for (let i = trades.length - 1; i >= 0; i--) {
+      if (allDates.has(trades[i].date)) trades.splice(i, 1);
+    }
+
+    curated.forEach((week) => {
+      week.days.forEach((dayDate, di) => {
+        const dayTarget = week.dailyNet[di];
+        const n = dayTarget < 0 ? 7 : dayTarget > 150 ? 6 : 5;
+        const weights = [];
+        let wsum = 0;
+        for (let t = 0; t < n; t++) {
+          const w = Math.random() * 0.6 + 0.4;
+          weights.push(w);
+          wsum += w;
+        }
+        let day = tradingDays.find((d) => d.date === dayDate);
+        if (!day) {
+          day = {
+            id: nextId(),
+            date: dayDate,
+            gate: 'GREEN',
+            whoop_sleep: week.sleep[di],
+            whoop_recovery: week.recovery[di],
+            rules_trend: 'Followed',
+            rules_market_cond: 'Followed',
+            rules_plays: 'Followed',
+            rules_execution: 'Followed',
+            rules_focus: 'Followed',
+            rules_consol: 'Followed',
+            rules_dll: 'Followed',
+          };
+          tradingDays.push(day);
+        } else {
+          day.gate = 'GREEN';
+          day.whoop_sleep = week.sleep[di];
+          day.whoop_recovery = week.recovery[di];
+        }
+
+        let allocated = 0;
+        for (let t = 0; t < n; t++) {
+          const isLast = t === n - 1;
+          const net = isLast
+            ? Math.round((dayTarget - allocated) * 100) / 100
+            : Math.round(((dayTarget * weights[t]) / wsum) * 100) / 100;
+          allocated += net;
+          const times = randomMorningSessionTimes(dayDate);
+          const slPts = pick([8, 10, 12]);
+          trades.push({
+            id: nextId(),
+            broker_trade_id: `demo_curated_${dayDate}_${t}`,
+            entry_time: times.entry_time,
+            exit_time: times.exit_time,
+            date: dayDate,
+            instrument: t % 3 === 0 ? 'ES' : 'MNQ',
+            direction: net >= 0 ? 'long' : 'short',
+            quantity: 1,
+            gross_pnl: Math.round((net + 1.2) * 100) / 100,
+            commission: 1.2,
+            net_pnl: net,
+            platform: 'demo',
+            account_name: '50K Eval',
+            account_type: 'eval',
+            stop_loss_points: slPts,
+            setup: pick(SETUPS),
+            management: net > 80 ? 'Partial' : pick(['Full', 'BE', null]),
+            sequence_id: Math.floor(t / 2) + 1,
+            gate_at_session_open: 'GREEN',
+          });
+        }
+      });
+    });
   }
 
   /** Sample weekly agent reports — Performance + Psychology only (demo). */
@@ -92,69 +176,29 @@
     const samples = [
       {
         focus: [
-          'Cap re-entries to one add-back per setup when volume drops below opening levels.',
-          'No new risk after 11:45 ET unless a fresh A+ imbalance break prints.',
+          'Scale out at 1.5R minimum on A+ trades before moving stops — tag exit reason on every winner.',
+          'After +$400 week-to-date by Thursday, Friday default size = 50% unless a fresh imbalance trend day.',
         ],
-        summaryPerf: 'Morning edge is real in the data — tighten hold quality and keep afternoons light.',
-        summaryPsych: 'Awareness is ahead of execution — use emotion tags as a pause trigger.',
-        themes: ['Hold A+ winners toward 1.5R', 'Two attempts max per setup after a loss'],
-        psych: `PSYCHOLOGY\n\nMENTAL & READINESS\nReadiness and results mostly aligned this week. Sleep averaged 79% (range 74–84%) with recovery 61–68% on trading days — all sessions logged GREEN gate in notes. Calm or Cautious journal tags on Mon, Thu, and Fri matched your three best P&L days (+$186 combined). Tue opened at 76% sleep / 64% recovery; you still held rules until midday — useful proof that structure can carry an average readiness day.\n\nEMOTIONAL PATTERN\nFrustrated and Impatient appeared after the first morning loss on two days — both times you named it in the journal before trade three. That is real progress versus prior months. The one slip: Wed afternoon added Impatient after a −0.8R scratch; trade count jumped from 4 to 7 in nineteen minutes. A two-minute reset before click five would have saved roughly 1.2R.\n\nWHAT IS WORKING\nPre-market templates with level, invalidation, and max attempts were used four of five days. Thursday’s Calm + Cautious sequence (two trades, +$142 net) is the model week — boring execution, full targets on the second trade. Keep that template even when the week starts red.`,
-        perf: `PERFORMANCE\n\nTwenty-eight trades, net +$318, average R +0.38. Win rate 54% ex-scratches; profit factor 1.38. Gross wins $892 vs gross losses $574. Average win 1.15R vs average loss 0.62R — losers are controlled; winner capture is the lever. Expectancy R +0.31 after commissions.\n\nEDGE QUALITY\nFive playbook sequences; three profitable (60% sequence win rate). Sequence 4 on Thursday (Pullback → add at value) netted +2.8R on two attempts. High-attempt sequences (4+ trades on one idea) went 1-for-3 and cost −1.9R combined. Trades tagged Entry Model Followed were +$264 net; improvised midday clicks were −$48. Hold-quality tags: ran_1r exits left an estimated +0.7R on the table across four winners.\n\nSESSION DISTRIBUTION\n71% of net P&L landed 9:30–11:30. The 10:00–10:30 bucket was +$148; 11:00–11:30 +$96. After 11:45 the book was −$26 on nine scratches — edge absent, commissions present. MNQ carried 82% of gross wins; ES flat on five trades.\n\nIMPROVEMENT FOCUS\nTag A+ trades and log exit type (plan vs fear). On trend days, partial at 1R with runner to 1.5R — three early exits this week below 1.5R account for the largest single improvement available (+0.15–0.2 to weekly expectancy).`,
-      },
-      {
-        focus: [
-          'Keep the 11:30 hard stop; document one sentence before any discretionary override.',
-          'Track whether BE trades are intentional risk cuts vs fear exits — tag them explicitly.',
-        ],
-        summaryPerf: 'Green week on process — expectancy positive; widen targets on best trades.',
-        summaryPsych: 'Calm dominated the journal — keep Friday discipline as strong as mid-week.',
-        themes: ['Recovery 55–65% → half size written pre-market', 'Five intentional trades per day unless A+ reason'],
-        psych: `PSYCHOLOGY\n\nMENTAL & READINESS\nFour of five sessions logged Calm in the journal — strongest emotional consistency this quarter. Sleep 82–88% on Mon/Wed/Fri; recovery 58–72% with no sub-50% days. You intuitively halved size on Tue (recovery 59%, gate still GREEN in plan) and finished that day +$44 — exactly the behavior to codify. Whoop and execution aligned on the days that mattered.\n\nEMOTIONAL PATTERN\nA single Impatient tag after Wednesday’s second winner — trade count rose from 3 to 5, but stayed inside playbook rules. No Revenge or FOMO tags all week. Friday could have been a “push” day after mid-week green; instead you logged Cautious and took only two trades. That choice preserved +$118 on the week.\n\nWHAT IS WORKING\nDLL respected on the hardest day (Tue chop, −$22 max before stop). After-Hours reviews referenced specific levels and emotions, not generic frustration. Focused tag on the Opening Drive winner correlated with +1.9R — link focus to size, not frequency.`,
-        perf: `PERFORMANCE\n\nTwenty-four trades, net +$412, average R +0.44. Win rate 51%; profit factor 1.52. Average win 1.08R vs loss 0.57R. Two scratch-heavy afternoons still finished green because morning sequences carried +3.1R combined.\n\nEDGE QUALITY\nSix sequences; four green. Opening Drive → Pullback stack on Wednesday (+2.4R, two attempts) was the week’s anchor. B-setup fades after 11:00 were net −$62 on eight trades — downgrade those to observation-only unless volume confirms. Playbook-only compliance ~78% by day count (4 clean days of 5).\n\nSESSION DISTRIBUTION\n88% of net P&L before 11:30. Eleven o’clock hour +$164; post-12:00 −$18 on low-quality attempts. Protect the 9:45–11:15 window — it is where your model repeatedly pays.\n\nIMPROVEMENT FOCUS\nSlightly fewer, larger morning trades: five intentional entries per day with a written reason for #6+. Raising average win R from 1.08 to 1.25 on A+ only requires holding three runners that tagged ran_2r+ this week.`,
-      },
-      {
-        focus: [
-          'Hard circuit breaker: three losses or −3R → platform closed until next session.',
-          'Pre-define max six trades per day; treat #7 as automatic process failure.',
-        ],
-        summaryPerf: 'Red on P&L, green on learning — playbook fine; cut afternoon improvisation.',
-        summaryPsych: 'Hard Wednesday, strong Friday reset — awareness is the asset.',
-        themes: ['Gate → size table before 9:25', 'Five-minute pause when Frustrated or Revenge logged'],
-        psych: `PSYCHOLOGY\n\nMENTAL & READINESS\nMixed readiness told an honest story. Mon/Tue sleep 81–86%, recovery 62–70% — aligned with calm execution. Wednesday: 84% sleep, 49% recovery, gate logged GREEN — body and plan disagreed. That day produced 14 trades and four rule breaks; the data supports a written gate→size table (GREEN full, AMBER half, RED observe only). Thu recovery bounced to 68%; Fri you logged Cautious twice and followed both plans — the reset worked.\n\nEMOTIONAL PATTERN\nFrustrated and Revenge tags preceded the Wednesday loss cluster (trades 7–11). Journal captured it live — next step is mechanical: when Revenge is typed, five-minute break, no keyboard. Impatient on Tue added two marginal re-entries (−0.9R). No emotional tag on Friday — process win regardless of P&L.\n\nWHAT IS WORKING\nFriday’s two-trade Cautious session is your recovery protocol — use it intraday, not only after damage. Mon and Tue mornings were nearly breakeven with rules intact; the playbook did not fail early — improvisation failed late.`,
-        perf: `PERFORMANCE\n\nThirty-six trades, net −$186, average R −0.14. Win rate 41%; profit factor 0.82. Playbook trades roughly breakeven (−$22); non-playbook afternoon trades −$164. One strong morning sequence (Pullback +1.8R) shows edge still exists when timed.\n\nEDGE QUALITY\nSeven sequences; two profitable (29%). Sequence 5 Wednesday (HVE fade attempts) took 6 trades for −2.6R net — classic high-attempt forcing. Before 10:45, book was −$48; after 11:30, −$138. Improvised tags dominated losing expectancy.\n\nSESSION DISTRIBUTION\nMorning 9:30–11:00: −$52 (salvageable). Midday 11:30–13:00: −$134 (reactive). Best single trade +1.8R at 10:08 — proves selective morning risk still works.\n\nIMPROVEMENT FOCUS\nTwo morning trades with full plan; if both red by 10:45, walk. Friday demonstrated you can execute that rule — make it default on amber recovery days too.`,
-      },
-      {
-        focus: [
-          'Scale out at 1.5R minimum on A+ trades before moving stops.',
-          'If up on the week by Thursday, Friday default size = 50%.',
-        ],
-        summaryPerf: 'Best R week in a month — one step from a breakout on hold quality.',
-        summaryPsych: 'Cautious is working as quality control, not hesitation.',
+        summaryPerf:
+          'Best R week in the sample — +$528 net, PF 1.61; morning edge is repeatable when hold quality catches up.',
+        summaryPsych:
+          'Cautious is functioning as quality control, not hesitation — readiness and journal tags aligned on the big days.',
         themes: ['1.5R minimum plan on A+ winners', 'Protect mode after weekly target — size down Thu/Fri'],
-        psych: `PSYCHOLOGY\n\nMENTAL & READINESS\nSleep 83–89% three days; recovery 61–74%. Gate GREEN four of five sessions. Cautious journal tag appeared on pullbacks that won — correlation, not coincidence: you waited for 5m acceptance and sized appropriately. Tue recovery 61% with Calm tag still produced a disciplined +$88 day.\n\nEMOTIONAL PATTERN\nConfidence rose after Mon/Tue greens; Wed added one Impatient tag after trade four — count went 4→6 but P&L impact was only −$34 (contained). No spiral. Thu/Fri Calm returned; Fri Impatient absent despite temptation to “finish strong.”\n\nWHAT IS WORKING\nPre-market plans listed invalidation and max adds — used all five days. In The Zone + Disciplined tags on the 10:52 winner (+2.1R) — note what preceded it (sleep >85%, recovery >68%, one-setup rule).`,
-        perf: `PERFORMANCE\n\nTwenty-six trades, net +$528, average R +0.51. Win rate 57%; profit factor 1.61. Average win 1.28R vs loss 0.58R — best loss control in six weeks. Gross wins $1,040 vs losses $512.\n\nEDGE QUALITY\nPullback setups +$398 net (15 trades). Opening Drive without volume confirmation −$72 (6 trades). MNQ +$461; ES −$33 on four attempts. Best trade +2.1R at 10:52 (Imbalance pullback, tags: Entry Model Followed, ran_2r+).\n\nSESSION DISTRIBUTION\nMorning map clean: 10:00–10:30 +$198, 11:00–11:30 +$142. Afternoon −$44 on five low-conviction trades — acceptable if attempt cap holds.\n\nIMPROVEMENT FOCUS\nThree winners exited before 1.5R on trend days — tagging exit reason would recover +0.15–0.2 weekly expectancy. Protect mode after hitting +$400 on Thu: Fri size at 50% would have saved −$28 give-back.`,
-      },
-      {
-        focus: [
-          'Document gate → size on the check-in card before 9:25 every session.',
-          'When recovery <55%, first trade is half size — no exceptions.',
-        ],
-        summaryPerf: 'Steady green week — sequences worked when attempts stayed low.',
-        summaryPsych: 'Journal and Whoop are starting to tell the same story — act on the gap.',
-        themes: ['Max three attempts per sequence', 'Pause after Impatient tag before next click'],
-        psych: `PSYCHOLOGY\n\nMENTAL & READINESS\nSleep averaged 80% (77–87%); recovery 60–71% with one 54% day (Thu). GREEN gate four sessions; Thu AMBER in notes but sized as full — worth tightening. Calm/Focused tags on 62% of journal entries. Anxious only on Mon open (first trade loss) — converted to Cautious by trade two after a five-minute break.\n\nEMOTIONAL PATTERN\nImpatient twice mid-week, both after +1R winners — classic confidence creep. Trade count stayed ≤8 per day except Thu (11). Fri emotions clean; two trades, both tagged Cautious, +$96 net.\n\nWHAT IS WORKING\nMon anxiety acknowledged in journal without rule breaks. Tue DLL + Focused tags on a rotational day — small green, high process value. Whoop recovery and trade count inverse correlation is visible — use it for size, not guilt.`,
-        perf: `PERFORMANCE\n\nTwenty-nine trades, net +$284, average R +0.35. Win rate 52%; profit factor 1.41. Expectancy +0.29R after fees. Scratches 7 trades (−$84 commissions) — still net green.\n\nEDGE QUALITY\nFive sequences; three winners. Low attempt (≤3) sequences: +4.2R combined. High attempt (5+) on Thu: −2.3R. ran_2r+ tag on 5 trades = 71% of gross wins.\n\nSESSION DISTRIBUTION\n9:30–10:00 +$112; 10:30–11:00 +$98; post-12:00 −$54 on six trades. Eleven-thirty checkpoint would have saved ~$40.\n\nIMPROVEMENT FOCUS\nHard cap three attempts per sequence ID in the journal. Thu is the template for what happens when the cap slips.`,
+        psych: `PSYCHOLOGY\n\nMENTAL & READINESS\nWeek of May 11–15: sleep averaged 85% (range 83–89%) with recovery 64–74% on trading days. Gate logged GREEN all five sessions. Mon opened Anxious after a −0.6R first trade; journal at 9:41 named it and you converted to Cautious by trade two — day finished +$88 with only five attempts. Thursday was the alignment peak: 89% sleep, 74% recovery, Calm tag pre-open, two trades, +$186 net. Friday recovery 69% — you logged Cautious, took two trades, +$16 net (protect mode after +$412 WTD). Whoop and execution told the same story on three of five days; Tue (recovery 64%) still produced +$142 because size stayed playbook-consistent.\n\nEMOTIONAL PATTERN\nImpatient appeared once — Wednesday after trade four (+1.1R winner) when count went 4→6; P&L impact was only −$34 because adds stayed inside the pullback model. No Revenge or FOMO tags all week. Frustrated zero times. Confidence creep risk showed up as “one more try” on Thu (11 trades) but net was still +$186 because adds were at value, not midday fades. The emotional win: you did not chase Friday afternoon despite being up on the week.\n\nWHAT IS WORKING\nPre-market templates with level, invalidation, and max attempts were used five of five days. In The Zone + Disciplined tags on the 10:52 MNQ winner (+2.1R) — note the stack: sleep >85%, recovery >68%, one-setup rule until +1R. Cautious on pullbacks that won (Wed, Fri) — waiting for 5m acceptance before click two. DLL respected on Tue chop (+$142 on six trades, no rule breaks). Journal entries referenced specific levels, not generic frustration — that correlation shows up in the trade tags.`,
+        perf: `PERFORMANCE\n\nTwenty-six trades Mon May 11 – Fri May 15, net +$528, average R +0.51. Win rate 58% (15W / 8L / 3 scratches); profit factor 1.61. Gross wins $1,040 vs gross losses $512. Average win 1.28R vs average loss 0.58R — best loss control in the demo window. Expectancy +0.44R after commissions. Max intraday drawdown −$62 (Wed midday); peak day +$186 (Thu).\n\nDaily P&L map: Mon +$88 (5 trades) · Tue +$142 (6) · Wed +$96 (6) · Thu +$186 (11) · Fri +$16 (2). Ex-scratch win rate 65% on MNQ; ES four trades net −$33 (stop taking ES unless NQ correlation confirms). Largest winner +2.1R at 10:52 Thu (Pullback, tags: Entry Model Followed, ran_2r+). Largest loser −0.9R Wed 11:22 (impulse add outside plan).\n\nEDGE QUALITY\nPullback setups: 15 trades, +$398 net, 60% win rate, avg +0.62R. Opening Drive without volume confirmation: 6 trades, −$72 net — downgrade to observation when opening range < 0.35% of prior close. Seven playbook sequences; five profitable (71% sequence win rate). Low-attempt sequences (≤3 trades): +5.1R combined. High-attempt sequence on Thu (5 trades, one idea): +1.8R — acceptable because adds were at planned value, not midday improvisation.\n\nTag and compliance detail: Entry Model Followed +$412 net (18 trades). Impulsive / improvised midday −$44 (5 trades). ran_2r+ on five trades = 71% of gross wins. ran_1r exits left an estimated +1.1R on the table across four winners that tagged 2R+ post-exit. Playbook compliance by day: 5/5 days with rules_trend Followed; rules_execution Broke once (Wed trade 6). BE exits: 4 trades, net +$18 — intentional risk cuts, not fear exits.\n\nSequence highlights: Seq 2 Tue Opening Drive → Pullback +2.4R (2 attempts). Seq 4 Thu Imbalance pullback +2.8R (2 attempts, partial 1R + runner). Seq 5 Wed midday fade attempts −$34 (3 trades) — contained leak, not a spiral.\n\nSESSION DISTRIBUTION\nMorning (9:30–11:30) +$572 (108% of net — afternoon give-back). Bucket detail: 9:30–10:00 +$124 · 10:00–10:30 +$198 · 10:30–11:00 +$88 · 11:00–11:30 +$142 · 11:30–12:00 −$18 · post-12:00 −$26 on five low-conviction scratches. 94% of gross wins occurred before 11:30. MNQ +$461 (22 trades); MES +$67 (2); ES −$33 (4).\n\nDay-of-week: Mon–Wed steady green (+$326 combined); Thu carried the week (+$186); Fri protect mode (+$16, 2 trades). Instrument concentration risk: 85% of attempts on MNQ — acceptable while edge is MNQ-biased; document ES filter before scaling size.\n\nIMPROVEMENT FOCUS\n1) Hold quality — three winners exited before 1.5R on trend days (Wed 10:18, Thu 10:31, Thu 11:04). Partial at 1R + runner to 1.5R on A+ only; tagging exit reason (plan vs fear) would recover an estimated +0.18–0.22 weekly expectancy. 2) Protect mode — after +$400 WTD by Thu close, Fri size at 50% (you did this behaviorally — codify on the check-in card). 3) ES filter — no ES unless NQ impulse confirms; would have saved −$33 and one rule-break adjacency. 4) Thu attempt cap — 11 trades still green, but cap at 8 unless imbalance day to reduce variance.`,
       },
       {
         focus: [
           'Max three attempts per A-setup — write it beside each level pre-market.',
-          'After +$300 week-to-date by Thu, Friday size 50% unless fresh trend day.',
+          '11:45 ET risk-off unless a written imbalance exception; Wed full-size on 58% recovery is the one sizing miss to fix.',
         ],
-        summaryPerf: 'Strong May 18–22 week — morning edge clear; protect gains after 11:45.',
-        summaryPsych: 'Calm execution on the days that mattered — keep the pause rule after first loss.',
+        summaryPerf:
+          'Strong May 18–22 week — +$412 net, morning edge clear; Wed sequence leak is isolated and fixable.',
+        summaryPsych:
+          'Calm execution on the days that mattered — add a mechanical pause after the first Frustrated tag.',
         themes: ['11:45 ET risk-off unless imbalance day', 'Runner to 1.5R on MNQ pullbacks'],
-        psych: `PSYCHOLOGY\n\nMENTAL & READINESS\nWeek of May 18–22: sleep 78–88% (Fri 87%), recovery 58–69% (Wed low 58%, Fri 62%). Gate GREEN all five sessions in check-in data. Mon Anxious → Calm after first loss (journal at 9:48). Wed recovery 58% — you traded full size; consider half on sub-60% days. Thu/Fri Calm + Cautious dominated — matched +$268 combined P&L.\n\nEMOTIONAL PATTERN\nFrustrated once Tue after midday chop (3 trades in 14 min, −$52) — named in journal, stopped at trade six. No Revenge tags. Fri opened with 87% sleep / 62% recovery — Cautious on both entries, +$118 net. Emotional awareness is ahead of automatic pauses; add the two-minute rule before trade three on any Frustrated log.\n\nWHAT IS WORKING\nPre-market notes listed ES/NQ levels and max attempts four of five days. Best psychology day: Thu Calm, two trades, +$142. Worst: Tue afternoon Impatient — contained to −$48 because you did not return after 12:00.`,
-        perf: `PERFORMANCE\n\nThirty-one trades Mon May 18 – Fri May 22, net +$412, average R +0.41. Win rate 52% ex-scratches; profit factor 1.47. Gross wins $1,284 vs losses $872. Average win 1.22R vs loss 0.59R.\n\nEDGE QUALITY\nSix sequences; four profitable (67% sequence win rate). Tue Opening Drive → Pullback +3.4R (two attempts). Wed high-attempt fade sequence −2.1R (9 trades) — the week’s only structural leak. Entry Model Followed +$318 net; post-11:45 improvised −$26 on six scratches. ran_2r+ runners = 44% of gross wins.\n\nSESSION DISTRIBUTION\n9:30–10:00 +$186 (45% of net); 10:00–10:30 +$124; 11:00–11:30 +$98. After 11:45 −$26 — commissions without edge. May 22 (Fri) morning +$118 on two trades validates the light-footprint close.\n\nIMPROVEMENT FOCUS\nThree MNQ pullbacks exited before 1.5R on trend days — partial 1R + runner is the highest-leverage tweak. Risk-off at 11:45 unless written imbalance exception saves ~$40/week at current commission rate.`,
+        psych: `PSYCHOLOGY\n\nMENTAL & READINESS\nWeek of May 18–22: sleep 78–88% (Fri 87%), recovery 58–69% (Wed low 58%, Fri 62%). Gate GREEN all five sessions in check-in data. Mon: Anxious → Calm after first loss (journal 9:48) — +$64 on five trades. Tue: 81% sleep / 59% recovery, Impatient after midday chop — contained to −$48 (stopped at trade 6, no return after 12:00). Wed: 84% sleep but 58% recovery — full size was the mismatch; 9 trades, +$118 net but emotional cost high. Thu/Fri: Calm + Cautious — +$278 combined on six trades. Whoop said “average” on Wed; journal said “focused” — the gap is where a written gate→size table (sub-60% recovery = half size) prevents unnecessary variance.\n\nEMOTIONAL PATTERN\nFrustrated once Tue (trades 4–6 in fourteen minutes, −$52 cluster) — named in journal before trade 7, no Revenge follow-through. Impatient twice: Tue afternoon, Wed after winner #3 (count 3→9 on Wed — the structural leak). No FOMO tags. Fri: Cautious on both entries with 87% sleep / 62% recovery — +$136 on two trades; proof that emotional label + size discipline beats “push” psychology after a green week.\n\nCorrelation table (journal tag → day P&L): Calm Mon +$64 · Impatient Tue −$48 · Focused/Cautious Wed +$118 · Calm Thu +$142 · Cautious Fri +$136. The outlier is Wed: positive P&L with the worst process day — do not confuse outcome with execution; the agent flags the 9-trade fade sequence anyway.\n\nWHAT IS WORKING\nPre-market notes listed ES/NQ levels and max attempts four of five days. Best psychology day: Thu Calm, two trades, +$142. Recovery protocol without waiting for damage: Tue stopped when Frustrated logged. DLL + rules_dll Followed four of five days. After-Hours review on Wed referenced “nine trades on one fade” — awareness is ahead of automation; next step is hard cap three attempts per sequence ID in the journal UI.`,
+        perf: `PERFORMANCE\n\nThirty-one trades Mon May 18 – Fri May 22, net +$412, average R +0.41. Win rate 55% ex-scratches (14W / 9L / 8 scratches); profit factor 1.47. Gross wins $1,284 vs losses $872. Average win 1.22R vs loss 0.59R. Expectancy +0.36R after fees. Max intraday drawdown −$78 (Tue 11:20–11:34). Peak day +$142 (Thu, 2 trades).\n\nDaily P&L map: Mon +$64 (5) · Tue −$48 (6) · Wed +$118 (9) · Thu +$142 (2) · Fri +$136 (2). Scratches cost −$96 in commissions — still net green because morning sequences carried +$486 before scratches. Tue is the process lesson day; Thu/Fri are the template days (8 combined trades, +$278).\n\nEDGE QUALITY\nSix sequences; four profitable (67% sequence win rate). Anchor: Tue Opening Drive → Pullback +3.4R (2 attempts, tags: Entry Model Followed, ran_2r+). Leak: Wed high-attempt fade sequence −$2.1R (9 trades, 2 winners / 7 marginal) — the only sequence with attempt count >5. Entry Model Followed +$318 net (19 trades). Post-11:45 improvised −$26 on six scratches (0.19R expectancy). Playbook-only days (Mon, Thu, Fri): +$342 on 9 trades. Mixed-process days (Tue, Wed): +$70 on 15 trades — same edge, worse execution tax.\n\nHold-quality: ran_2r+ runners = 44% of gross wins ($564 of $1,284). ran_1r early exits: six trades, estimated +0.9R left on table. BE stops: 3 trades, net +$22 — all tagged intentional in notes. Partial management on Thu winner: 1R scale + runner to 1.8R — model exit for next week.\n\nSetup breakdown: Pullback +$286 (12 trades, PF 1.8) · Opening Drive +$148 (6) · Reversal −$22 (8) · Breakout null-setup scratches −$0 net, −$18 commissions. MNQ +$398 (24 trades); ES +$14 (4); MES flat (3).\n\nSESSION DISTRIBUTION\n9:30–10:00 +$186 (45% of weekly net) · 10:00–10:30 +$124 · 10:30–11:00 +$52 · 11:00–11:30 +$98 · 11:30–11:45 +$12 · after 11:45 −$26 (six scratches, no edge). 91% of gross wins before 11:30. Best hour: 10:00–10:30 (PF 2.1 on 7 trades). Worst window: Tue 11:15–11:35 (−$52, three trades, Impatient tag in journal).\n\nMay 22 (Fri) micro-map: two trades, both before 10:20, +$136 net, Cautious tags, 87% sleep — validates weekly protect-mode close. Wed micro-map: nine trades, +$118 net but −$2.1R on sequence 3 alone — high P&L with poor process; do not replicate.\n\nIMPROVEMENT FOCUS\n1) Sizing — Wed traded full size at 58% recovery; half-size rule would have cut sequence 3 attempts and saved an estimated −$1.2R while keeping +$118 day if first two trades repeated. 2) Hold — three MNQ pullbacks exited before 1.5R on trend days (Mon 10:06, Wed 10:44, Thu 10:12); partial 1R + runner is highest leverage (+0.15–0.2 expectancy). 3) Risk-off — 11:45 ET hard stop unless imbalance exception in pre-market notes (six post-11:45 scratches = −$26 + friction). 4) Sequence cap — max three attempts per A-setup ID; Wed would drop from 9 to ≤5 trades on the fade. 5) Tue protocol — when Frustrated logged, two-minute pause before trade 5 (would have avoided −$52 cluster).`,
       },
     ];
 
@@ -416,6 +460,7 @@
     }
 
     seedJournalAndLessons(tradingDays, journal, now);
+    seedCuratedWeekTrades(trades, tradingDays);
     const agentWeeks = seedAgentReports(agentReports, now);
 
     const limaToday = limaDateStr(now);
