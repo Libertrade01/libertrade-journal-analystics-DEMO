@@ -3113,6 +3113,8 @@ function renderDayOfWeek(trades) {
 
   const avgs   = days.map(day => { const dt = trades.filter(t => t.date && getDow(t) === day.idx); return dt.length ? dt.reduce((s,x) => s+(x.net_pnl||0), 0)/dt.length : 0; });
   const counts = days.map(day => trades.filter(t => t.date && getDow(t) === day.idx).length);
+  const barColors = barPnlBarColors(avgs);
+  const chartT = getChartTheme();
 
   charts['dow'] = new Chart(ctx, {
     type: 'bar',
@@ -3120,8 +3122,8 @@ function renderDayOfWeek(trades) {
       labels: days.map(d => d.label),
       datasets: [{
         data: avgs,
-        backgroundColor: avgs.map(v => v >= 0 ? 'rgba(37,145,134,0.35)' : 'rgba(138,53,53,0.35)'),
-        borderColor:     avgs.map(v => v >= 0 ? getChartTheme().green : getChartTheme().redBar),
+        backgroundColor: barColors.backgroundColor,
+        borderColor: barColors.borderColor,
         borderWidth: 1, borderRadius: 3,
       }]
     },
@@ -3130,15 +3132,15 @@ function renderDayOfWeek(trades) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: getChartTheme().tooltipBg, borderColor: getChartTheme().tooltipBorder, borderWidth: 1,
+          backgroundColor: chartT.tooltipBg, borderColor: chartT.tooltipBorder, borderWidth: 1,
           titleFont: { family: 'DM Mono', size: 10 }, bodyFont: { family: 'DM Mono', size: 11 },
-          titleColor: getChartTheme().titleColor, bodyColor: getChartTheme().bodyColor,
+          titleColor: chartT.titleColor, bodyColor: chartT.bodyColor,
           callbacks: { label: c => `Avg: $${c.raw.toFixed(0)} · ${counts[c.dataIndex]} trades` }
         }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: getChartTheme().tick, font: { family: 'DM Mono', size: 10 } }, border: { display: false } },
-        y: { grid: { color: getChartTheme().grid, lineWidth: 0.5 }, ticks: { color: getChartTheme().tick, font: { family: 'DM Mono', size: 10 }, callback: v => '$'+v }, border: { display: false } }
+        x: { grid: { display: false }, ticks: { color: chartT.tick, font: { family: 'DM Mono', size: 10 } }, border: { display: false } },
+        y: pnlBarYScale(avgs, 10)
       }
     }
   });
@@ -3174,6 +3176,8 @@ function renderSequence(trades) {
 
   const avgs   = labels.map(k => +(buckets[k].reduce((s,v)=>s+v,0)/buckets[k].length).toFixed(2));
   const counts = labels.map(k => buckets[k].length);
+  const barColors = barPnlBarColors(avgs);
+  const chartT = getChartTheme();
 
   const ctx = document.getElementById('chart-seq').getContext('2d');
   charts['seq'] = new Chart(ctx, {
@@ -3183,8 +3187,8 @@ function renderSequence(trades) {
       datasets: [{
         label: 'Avg P&L',
         data: avgs,
-        backgroundColor: avgs.map(v => v >= 0 ? 'rgba(37,145,134,0.35)' : 'rgba(138,53,53,0.35)'),
-        borderColor: avgs.map(v => v >= 0 ? getChartTheme().green : getChartTheme().redBar),
+        backgroundColor: barColors.backgroundColor,
+        borderColor: barColors.borderColor,
         borderWidth: 1,
       }]
     },
@@ -3193,18 +3197,18 @@ function renderSequence(trades) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: getChartTheme().tooltipBg, borderColor: getChartTheme().tooltipBorder, borderWidth: 1,
+          backgroundColor: chartT.tooltipBg, borderColor: chartT.tooltipBorder, borderWidth: 1,
           titleFont: { family: 'DM Mono', size: 10 },
           bodyFont: { family: 'DM Mono', size: 11 },
-          titleColor: getChartTheme().titleColor, bodyColor: getChartTheme().bodyColor,
+          titleColor: chartT.titleColor, bodyColor: chartT.bodyColor,
           callbacks: {
             label: ctx => `Avg: $${ctx.raw} (${counts[ctx.dataIndex]} trades)`
           }
         }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: getChartTheme().tick, font: { family: 'DM Mono', size: 10 } }, border: { display: false } },
-        y: { grid: { color: getChartTheme().grid, lineWidth: 0.5 }, ticks: { color: getChartTheme().tick, font: { family: 'DM Mono', size: 10 }, callback: v => `$${v}` }, border: { display: false } }
+        x: { grid: { display: false }, ticks: { color: chartT.tick, font: { family: 'DM Mono', size: 10 } }, border: { display: false } },
+        y: pnlBarYScale(avgs, 10)
       }
     }
   });
@@ -6121,19 +6125,21 @@ function renderInlineAgentSection(weekEnding, reports) {
 }
 
 function renderReportCharts(days, trades) {
-  // Daily P&L bar chart
-  const ctx = document.getElementById('rpt-pnl-chart');
-  if (!ctx) return;
+  destroyChart('rpt-pnl');
+  const el = document.getElementById('rpt-pnl-chart');
+  if (!el) return;
   const labels = days.map(d => new Date(d.date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short'}));
   const values = days.map(d => trades.filter(t => t.date === d.date).reduce((s,t) => s+(t.net_pnl||0), 0));
-  new Chart(ctx, {
+  const barColors = barPnlBarColors(values);
+  const chartT = getChartTheme();
+  charts['rpt-pnl'] = new Chart(el, {
     type: 'bar',
     data: {
       labels,
       datasets: [{
         data: values,
-        backgroundColor: values.map(v => v>=0?'rgba(37,145,134,0.5)':'rgba(138,53,53,0.5)'),
-        borderColor:     values.map(v => v>=0?'rgba(37,145,134,0.8)':'rgba(138,53,53,0.8)'),
+        backgroundColor: barColors.backgroundColor,
+        borderColor: barColors.borderColor,
         borderWidth: 1, borderRadius: 3,
       }]
     },
@@ -6141,8 +6147,8 @@ function renderReportCharts(days, trades) {
       responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{
-        x:{grid:{display:false},ticks:{color:getChartTheme().tick,font:{family:'DM Mono',size:9}},border:{display:false}},
-        y:{grid:{color:getChartTheme().grid,lineWidth:0.5},ticks:{color:getChartTheme().tick,font:{family:'DM Mono',size:9},callback:v=>'$'+v},border:{display:false}}
+        x:{grid:{display:false},ticks:{color:chartT.tick,font:{family:'DM Mono',size:9}},border:{display:false}},
+        y: pnlBarYScale(values, 9),
       }
     }
   });
