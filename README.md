@@ -9,6 +9,7 @@ Static demo of the Libertrade Analytics dashboard. Uses in-memory mock trade dat
 - **Sign in to Demo** — no Google auth; sample data only
 - Read-only: import, sync, and commission backfill are disabled
 - Default UI scale matches **125% browser zoom** via `html { zoom: 1.25; }` (the layout is mostly `px`-based; root `font-size` alone would not scale charts and spacing the same way). Works in Chromium/Edge; Safari 15.4+ supports CSS `zoom`.
+- **Slate Pro** light theme by default (Inter + IBM Plex Sans KPIs); dark mode uses elevated charcoal. Compare directions at `/style-previews/`.
 
 ## Local development
 

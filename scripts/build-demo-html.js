@@ -169,6 +169,14 @@ html = html.replace(
 
 html = html.replace(/\s*<script src="\/js\/demo-bootstrap\.js"><\/script>\s*(?=<\/body>)/i, '\n');
 
+// Default theme: light (Slate) on first visit
+html = html.replace(
+  /const saved = localStorage\.getItem\('libertrade-theme'\);\s*\n\s*if \(saved === 'light'\)/,
+  `const saved = localStorage.getItem('libertrade-theme');
+  const useLight = saved === null || saved === 'light';
+  if (useLight)`
+);
+
 fs.mkdirSync(path.dirname(dest), { recursive: true });
 fs.writeFileSync(dest, html, 'utf8');
 console.log('OK:', dest, html.length, 'bytes');

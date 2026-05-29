@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="aurora">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Libertrade — Style Previews</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Syne:wght@600;700&family=IBM+Plex+Sans:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style-previews/themes.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      transition: background 0.25s, color 0.25s;
+    }
+
+    .preview-shell { max-width: 1100px; margin: 0 auto; padding: 24px 28px 48px; }
+
+    .preview-header {
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .preview-header h1 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text-kpi);
+      margin-bottom: 6px;
+    }
+    .preview-header h1 span { color: var(--accent); }
+    .preview-header p {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .preview-header a {
+      color: var(--accent);
+      text-decoration: none;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .preview-header a:hover { text-decoration: underline; }
+
+    .theme-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .theme-tab {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .theme-tab:hover { color: var(--text); border-color: var(--text); }
+    .theme-tab.active {
+      background: var(--surface);
+      color: var(--text-kpi);
+      border-color: var(--accent);
+      box-shadow: var(--shadow-card);
+    }
+    .theme-desc {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 520px;
+    }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 28px 0 12px;
+    }
+
+    .auth-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 32px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    #auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 44px 48px;
+      text-align: center;
+      width: 340px;
+      box-shadow: var(--shadow-card);
+    }
+    .auth-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 14px;
+      padding: 6px 12px;
+      border: 1px solid color-mix(in srgb, var(--cyan) 40%, transparent);
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .auth-title {
+      font-family: var(--font-sans);
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-kpi);
+      margin-bottom: 8px;
+    }
+    .auth-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .auth-p {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .auth-btn {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      cursor: pointer;
+    }
+    [data-theme="noir"] .auth-btn { color: #0f1219; }
+
+    .topbar {
+      background: var(--topbar-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .wordmark {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-kpi);
+    }
+    .wordmark span { color: var(--accent); }
+    .logo-sub {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-left: 10px;
+    }
+    .nav-pill {
+      display: flex;
+      gap: 2px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px;
+    }
+    .nav-pill button {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: default;
+    }
+    .nav-pill .on {
+      background: var(--surface);
+      color: var(--text-kpi);
+      box-shadow: var(--shadow-card);
+    }
+    .nav-pill .off { background: none; color: var(--muted); }
+
+    .header-strip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow-card);
+    }
+    .readiness-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .gate-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--green);
+    }
+    .gate-badge::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+    .kpi-val {
+      font-family: var(--font-num);
+      font-size: 20px;
+      font-weight: var(--weight-kpi);
+      font-variant-numeric: tabular-nums;
+      color: var(--text-kpi);
+      line-height: 1;
+    }
+    .kpi-val.good { color: var(--green); }
+    .kpi-val.bad { color: var(--red); }
+    .strip-divider {
+      width: 1px;
+      height: 36px;
+      background: var(--border);
+    }
+
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 4px;
+    }
+    .range-btn {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 4px;
+      cursor: default;
+    }
+    .range-btn.active {
+      border-color: var(--text-kpi);
+      color: var(--text-kpi);
+      background: var(--surface2);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 800px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 16px 18px;
+      border-radius: 8px;
+      box-shadow: var(--shadow-card);
+    }
+    .stat-card .label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .stat-card .value {
+      font-family: var(--font-num);
+      font-size: 26px;
+      font-weight: var(--weight-kpi);
+      font-variant-numeric: tabular-nums;
+      color: var(--text-kpi);
+      line-height: 1;
+    }
+    .stat-card .value.pos { color: var(--green); }
+    .stat-card .value.neg { color: var(--red); }
+    .stat-card .sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 22px;
+      box-shadow: var(--shadow-card);
+    }
+    .card-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-title::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      background: var(--accent);
+      border-radius: 1px;
+      opacity: 0.85;
+    }
+    .chart-wrap { height: 200px; position: relative; }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .preview-table th {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .preview-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+    .preview-table td.pos {
+      font-family: var(--font-num);
+      font-weight: var(--weight-kpi);
+      font-variant-numeric: tabular-nums;
+      color: var(--green);
+    }
+    .preview-table td.neg {
+      font-family: var(--font-num);
+      font-weight: var(--weight-kpi);
+      font-variant-numeric: tabular-nums;
+      color: var(--red);
+    }
+    .preview-table tr:hover td { background: var(--surface2); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 700px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <header class="preview-header">
+      <h1>Liber<span>trade</span> — Style Previews</h1>
+      <p>Compare three directions before applying to the full demo</p>
+      <p><a href="/">← Open live demo</a></p>
+
+      <div class="theme-tabs" role="tablist">
+        <button type="button" class="theme-tab active" data-theme="aurora">Aurora Light</button>
+        <button type="button" class="theme-tab" data-theme="slate">Slate Pro</button>
+        <button type="button" class="theme-tab" data-theme="noir">Noir Elevated</button>
+      </div>
+      <p class="theme-desc" id="theme-desc">Warm off-white, strong tabular KPIs — recommended portfolio default (light).</p>
+    </header>
+
+    <p class="section-label">Sign-in screen</p>
+    <div class="auth-wrap">
+      <div id="auth-card">
+        <div class="auth-badge">Portfolio demo</div>
+        <div class="auth-title">Libertrade</div>
+        <div class="auth-sub">Analytics · Demo</div>
+        <p class="auth-p">Sample trading data only. No Google sign-in, no live account.</p>
+        <button type="button" class="auth-btn">Sign in to Demo</button>
+      </div>
+    </div>
+
+    <p class="section-label">Top bar</p>
+    <div class="topbar">
+      <div style="display:flex;align-items:baseline">
+        <span class="wordmark">Liber<span>trade</span></span>
+        <span class="logo-sub">Analytics · Demo</span>
+      </div>
+      <div class="nav-pill">
+        <button type="button" class="on">Dashboard</button>
+        <button type="button" class="off">Reports</button>
+      </div>
+    </div>
+
+    <p class="section-label">Readiness strip</p>
+    <div class="header-strip">
+      <div>
+        <div class="readiness-label">Today's Gate</div>
+        <div class="gate-badge">Green</div>
+      </div>
+      <div class="strip-divider"></div>
+      <div>
+        <div class="readiness-label">Whoop Sleep</div>
+        <div class="kpi-val good">84%</div>
+      </div>
+      <div>
+        <div class="readiness-label">Recovery</div>
+        <div class="kpi-val good">72%</div>
+      </div>
+      <div class="strip-divider"></div>
+      <div>
+        <div class="readiness-label">Today's P&amp;L</div>
+        <div class="kpi-val good">+$428.50</div>
+      </div>
+    </div>
+
+    <p class="section-label">Date filters</p>
+    <div class="filter-bar">
+      <span class="filter-label">Range</span>
+      <button type="button" class="range-btn">This Week</button>
+      <button type="button" class="range-btn">Last Week</button>
+      <button type="button" class="range-btn">This Month</button>
+      <button type="button" class="range-btn active">All Time</button>
+    </div>
+
+    <p class="section-label">Stat cards</p>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Net P&amp;L</div>
+        <div class="value pos">$12,847</div>
+        <div class="sub">142 trades</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Win Rate</div>
+        <div class="value">58.4%</div>
+        <div class="sub">excl. BE</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Profit Factor</div>
+        <div class="value pos">1.84</div>
+        <div class="sub">gross win / loss</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Max Drawdown</div>
+        <div class="value neg">-$1,240</div>
+        <div class="sub">peak to trough</div>
+      </div>
+    </div>
+
+    <p class="section-label">Chart &amp; table</p>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Cumulative P&amp;L</div>
+        <div class="chart-wrap">
+          <canvas id="preview-chart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent days</div>
+        <table class="preview-table">
+          <thead>
+            <tr><th>Date</th><th>Gate</th><th>P&amp;L</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Thu 28 May</td><td style="color:var(--green)">GREEN</td><td class="pos">+$428.50</td></tr>
+            <tr><td>Wed 27 May</td><td style="color:var(--amber)">AMBER</td><td class="neg">-$112.00</td></tr>
+            <tr><td>Tue 26 May</td><td style="color:var(--green)">GREEN</td><td class="pos">+$891.25</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const THEME_DESC = {
+      aurora: 'Warm off-white, strong tabular KPIs — recommended portfolio default (light).',
+      slate: 'Cool institutional light — Inter + IBM Plex Sans, tighter borders, minimal shadow.',
+      noir: 'Elevated dark — brighter charcoal surfaces and semibold KPIs (for theme toggle fans).'
+    };
+
+    const CHART_DATA = [120, 280, 210, 450, 380, 620, 580, 890, 820, 1040, 980, 1280];
+    let chart;
+
+    function getTheme() {
+      return document.documentElement.getAttribute('data-theme') || 'aurora';
+    }
+
+    function chartColors() {
+      const root = getComputedStyle(document.documentElement);
+      return {
+        line: root.getPropertyValue('--chart-line').trim(),
+        grid: root.getPropertyValue('--chart-grid').trim(),
+        tick: root.getPropertyValue('--chart-tick').trim(),
+        fillTop: root.getPropertyValue('--chart-fill-top').trim(),
+        fillBot: root.getPropertyValue('--chart-fill-bot').trim(),
+        surface: root.getPropertyValue('--surface').trim(),
+        border: root.getPropertyValue('--border').trim(),
+        muted: root.getPropertyValue('--muted').trim(),
+        text: root.getPropertyValue('--text').trim()
+      };
+    }
+
+    function renderChart() {
+      const c = chartColors();
+      const ctx = document.getElementById('preview-chart').getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 200);
+      grad.addColorStop(0, c.fillTop);
+      grad.addColorStop(1, c.fillBot);
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: CHART_DATA.map((_, i) => i + 1),
+          datasets: [{
+            data: CHART_DATA,
+            borderColor: c.line,
+            borderWidth: 2,
+            backgroundColor: grad,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: c.surface,
+              borderColor: c.border,
+              borderWidth: 1,
+              titleColor: c.muted,
+              bodyColor: c.text,
+              titleFont: { family: 'DM Mono', size: 10 },
+              bodyFont: { family: 'DM Mono', size: 12 }
+            }
+          },
+          scales: {
+            x: { display: false },
+            y: {
+              grid: { color: c.grid, lineWidth: 0.5 },
+              ticks: {
+                color: c.tick,
+                font: { family: 'DM Mono', size: 10 },
+                callback: v => '$' + v
+              },
+              border: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function setTheme(name) {
+      document.documentElement.setAttribute('data-theme', name);
+      document.querySelectorAll('.theme-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === name);
+      });
+      document.getElementById('theme-desc').textContent = THEME_DESC[name] || '';
+      renderChart();
+      if (history.replaceState) {
+        history.replaceState(null, '', '?theme=' + name);
+      }
+    }
+
+    document.querySelectorAll('.theme-tab').forEach(btn => {
+      btn.addEventListener('click', () => setTheme(btn.dataset.theme));
+    });
+
+    const params = new URLSearchParams(location.search);
+    const initial = ['aurora', 'slate', 'noir'].includes(params.get('theme'))
+      ? params.get('theme')
+      : 'aurora';
+    setTheme(initial);
+  </script>
+</body>
+</html>
