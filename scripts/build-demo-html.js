@@ -155,6 +155,15 @@ html = html.replace(
 );
 
 html = html.replace(
+  /var now = new Date\(\);\s*var months = \[\];\s*for \(var i = 0; i < 6; i\+\+\) \{\s*var d = new Date\(now\.getFullYear\(\), now\.getMonth\(\) - i, 1\);\s*months\.push\(getMonthRange\(d\.getFullYear\(\), d\.getMonth\(\)\)\);\s*\}/,
+  `var year = new Date().getFullYear();
+  var months = [
+    getMonthRange(year, 4),
+    getMonthRange(year, 3),
+  ];`
+);
+
+html = html.replace(
   /\n<\/div>\s*\n<script>\s*\n\/\/ ── Config/,
   `
   <footer class="demo-footer" style="margin-top:auto;padding:10px 24px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);text-align:center">

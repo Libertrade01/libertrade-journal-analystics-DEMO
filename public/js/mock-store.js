@@ -72,6 +72,14 @@
     return out;
   }
 
+  /** Demo calendar window — monthly reports show April and May only. */
+  const DEMO_MONTH_START = '2026-04-01';
+  const DEMO_MONTH_END = '2026-05-31';
+
+  function inDemoMonthRange(dayDate) {
+    return dayDate >= DEMO_MONTH_START && dayDate <= DEMO_MONTH_END;
+  }
+
   /** Demo week endings (Fridays) — two showcase weeks only. */
   function demoAgentWeeks() {
     return ['2026-05-15', '2026-05-22'];
@@ -395,6 +403,7 @@
     for (let i = 55; i >= 0; i--) {
       const dayDate = limaDateStr(addDays(now, -i));
       if (!isWeekday(dayDate)) continue;
+      if (!inDemoMonthRange(dayDate)) continue;
 
       const gate = pick(GATES);
       const dayId = nextId();

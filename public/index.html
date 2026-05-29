@@ -2371,6 +2371,47 @@ function getChartTheme() {
     bodyColor: light ? '#141820' : '#e6e8ef',
     fillTop: light ? 'rgba(21,107,98,0.14)' : 'rgba(46,184,168,0.2)',
     fillBot: light ? 'rgba(21,107,98,0)' : 'rgba(46,184,168,0)',
+    greenBarFill: light ? 'rgba(21,107,98,0.35)' : 'rgba(46,184,168,0.35)',
+    redBarFill: light ? 'rgba(160,48,48,0.35)' : 'rgba(138,53,53,0.35)',
+    greenBarBorder: light ? 'rgba(21,107,98,0.85)' : 'rgba(46,184,168,0.85)',
+    redBarBorder: light ? 'rgba(160,48,48,0.85)' : 'rgba(138,53,53,0.85)',
+    gridSub: light ? 'rgba(208,212,222,0.55)' : 'rgba(54,59,74,0.55)',
+    gridZero: light ? 'rgba(92,100,120,0.85)' : 'rgba(138,144,163,0.9)',
+  };
+}
+
+function barPnlBarColors(values) {
+  const t = getChartTheme();
+  return {
+    backgroundColor: values.map(v => v >= 0 ? t.greenBarFill : t.redBarFill),
+    borderColor: values.map(v => v >= 0 ? t.greenBarBorder : t.redBarBorder),
+  };
+}
+
+function pnlBarYScale(values, tickSize) {
+  const t = getChartTheme();
+  const nums = values.filter(v => typeof v === 'number' && isFinite(v));
+  const dataMin = nums.length ? Math.min(...nums) : 0;
+  const dataMax = nums.length ? Math.max(...nums) : 0;
+  const min = Math.min(0, dataMin);
+  const max = Math.max(0, dataMax);
+  const span = max - min || Math.max(Math.abs(max), Math.abs(min), 50);
+  const pad = Math.max(span * 0.15, 20);
+  return {
+    min: min - (min < 0 ? pad : pad * 0.35),
+    max: max + (max > 0 ? pad : pad * 0.35),
+    grid: {
+      drawOnChartArea: true,
+      drawBorder: false,
+      lineWidth: ctx => (ctx.tick.value === 0 ? 1 : 0.5),
+      color: ctx => (ctx.tick.value === 0 ? t.gridZero : t.gridSub),
+    },
+    ticks: {
+      color: t.tick,
+      font: { family: 'DM Mono', size: tickSize || 10 },
+      callback: v => '$' + v,
+    },
+    border: { display: false },
   };
 }
 
@@ -6192,12 +6233,11 @@ async function initMonthlySidebar() {
   if (!el || el.dataset.loaded === '1') return;
   el.innerHTML = '<div style="padding:8px 20px;font-family:var(--font-mono);font-size:10px;color:var(--muted)">Loading...</div>';
 
-  var now = new Date();
-  var months = [];
-  for (var i = 0; i < 6; i++) {
-    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(getMonthRange(d.getFullYear(), d.getMonth()));
-  }
+  var year = new Date().getFullYear();
+  var months = [
+    getMonthRange(year, 4),
+    getMonthRange(year, 3),
+  ];
 
   var earliest = months[months.length-1].start;
   var res = await fetch(SUPABASE_URL + '/rest/v1/trades?select=date,net_pnl&date=gte.' + earliest, { headers: HEADERS });
